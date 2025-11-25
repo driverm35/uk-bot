@@ -1,7 +1,6 @@
 # --- Виртуальные окружения / uv ---
 .venv/
 .uv/
-uv.lock
 
 # --- Python cache ---
 __pycache__/

@@ -2,25 +2,19 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Установка uv
+# Копируем uv из официального образа
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-# Включаем системный Python для uv
 ENV UV_SYSTEM_PYTHON=1
 
-# Копирование файлов зависимостей
-COPY pyproject.toml uv.lock* ./
+# Только pyproject.toml — uv сам создаст lockfile внутри
+COPY pyproject.toml ./
 
-# Установка зависимостей
-RUN uv sync --frozen --no-dev --no-install-project
+# Ставим зависимости (создаст .venv и uv.lock внутри контейнера)
+RUN uv sync --no-dev --no-install-project
 
-# Копирование остального кода
+# Копируем остальной код
 COPY . .
-
-# Установка проекта
-RUN uv sync --frozen --no-dev
 
 ENV PYTHONUNBUFFERED=1
 
-# Запуск через uv
 CMD ["uv", "run", "run.py"]
