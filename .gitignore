@@ -1,38 +1,45 @@
-# venv / uv
+# --- Виртуальные окружения / uv ---
 .venv/
 .uv/
 uv.lock
 
-# Python мусор
+# --- Python cache ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+
+# --- Логи ---
 *.log
 
-# Тесты/инструменты
+# --- Тестовые кэши ---
 .mypy_cache/
 .pytest_cache/
 .coverage
 htmlcov/
 
-# IDE
+# --- IDE ---
 .vscode/
 .idea/
 *.iml
 
-# Система
-.DS_Store
-Thumbs.db
-
-# Git
+# --- Git ---
 .git/
 
-# Среды/секреты
+# --- Секреты и локальные настройки ---
 .env
 .env.*
-*.sqlite3
 *.db
+*.sqlite3
+*.sqlite
 
-# Кэши uvicorn/aiogram если где-то кладёшь
-*.pid
+# --- Временные файлы ---
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# --- OS мусор ---
+.DS_Store
+Thumbs.db
