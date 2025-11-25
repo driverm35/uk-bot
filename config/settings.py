@@ -33,15 +33,21 @@ def _parse_days_csv(raw: str) -> list[int]:
 # Корневая директория проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Путь к БД
-DATABASE_PATH = config("DATABASE_PATH", default="data/database.db")
+# Путь к БД (из окружения или по умолчанию)
+_db_path_str = config("DATABASE_PATH", default="data/database.db")
 
-# Преобразуем относительный путь в абсолютный
-if not Path(DATABASE_PATH).is_absolute():
+# Преобразуем в Path
+DATABASE_PATH = Path(_db_path_str)
+
+# Если путь относительный – делаем его относительно BASE_DIR
+if not DATABASE_PATH.is_absolute():
     DATABASE_PATH = BASE_DIR / DATABASE_PATH
 
-# Создаём директорию если её нет
+# Создаём директорию, если её нет
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+# URL для sqlite+aiosqlite
+DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_PATH}"
 
 METER_REMIND_DAYS: list[int] = _parse_days_csv(config("METER_REMIND_DAYS", "25"))
 
