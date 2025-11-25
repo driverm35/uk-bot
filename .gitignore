@@ -1,0 +1,38 @@
+# venv / uv
+.venv/
+.uv/
+uv.lock
+
+# Python мусор
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+
+# Тесты/инструменты
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Система
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Среды/секреты
+.env
+.env.*
+*.sqlite3
+*.db
+
+# Кэши uvicorn/aiogram если где-то кладёшь
+*.pid

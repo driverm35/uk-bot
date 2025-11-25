@@ -1,0 +1,43 @@
+services:
+  bot:
+    build: .
+    container_name: bot
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data  # Локальная директория вместо volume
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "5"
+    ports:
+      - "8000:8000"
+    networks: [app-network]
+
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    container_name: backup
+    restart: unless-stopped
+    env_file: [.env]
+    volumes:
+      - ./data:/app/data:ro
+      - ./backup_logs:/var/log
+      - ./app/backup:/backup:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "5"
+    depends_on:
+      - bot
+    networks: [app-network]
+
+networks:
+  app-network:
+    driver: bridge

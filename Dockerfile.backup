@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+
+RUN pip install --no-cache-dir boto3
+
+# Копируем скрипт планировщика
+COPY app/backup/run_backup.sh /run_backup.sh
+RUN chmod +x /run_backup.sh
+
+CMD ["/run_backup.sh"]
