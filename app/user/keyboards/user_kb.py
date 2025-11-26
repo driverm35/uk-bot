@@ -141,10 +141,6 @@ def type_meter_menu():
         text="🔥 Горячая вода",
         callback_data=cb(a="select_meter_type", type="hot").pack()
     )
-    # kb.button(
-    #     text="❄️ Холодная вода",
-    #     callback_data=cb(a="select_meter_type", type="cold").pack()
-    # )
     kb.button(text="🔙 Назад", callback_data=cb(a="cabinet").pack())
     kb.adjust(1, 1)
     return kb.as_markup()
@@ -320,12 +316,18 @@ def meter_number_menu(month_num: int, year: int):
     """Меню выбора номера счётчика"""
     kb = InlineKeyboardBuilder()
     
-    for i in range(1, 4):  # 1, 2, 3
-        kb.button(
-            text=f"Счётчик №{i}",
-            callback_data=cb(a="meter_new", id=i, month=month_num, year=year).pack()
+    kb.button(
+            text=f"ГВС кухня",
+            callback_data=cb(a="meter_new", id=1, month=month_num, year=year).pack()
         )
-    
+    kb.button(
+            text=f"ГВС санузел №1",
+            callback_data=cb(a="meter_new", id=2, month=month_num, year=year).pack()
+        )
+    kb.button(
+            text=f"ГВС санузел №2",
+            callback_data=cb(a="meter_new", id=3, month=month_num, year=year).pack()
+        )
     kb.button(
         text="🔙 Назад",
         callback_data=cb(a="meter_menu").pack()
