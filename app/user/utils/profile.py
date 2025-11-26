@@ -76,5 +76,5 @@ async def build_profile_text(user_id: int) -> str:
         f"• Активные: <b>{active_cnt}</b>\n(Открыты: {open_cnt}, В работе: {work_cnt})\n"
         f"• Завершены: <b>{done_cnt}</b>\n"
         f"• Всего: <b>{total_cnt}</b>\n\n"
-        "<i>Показания принимаем с 10 до 24 числа каждого месца</i>"
+        "<i>Показания принимаем с 10 до 23 числа каждого месца</i>"
     )
