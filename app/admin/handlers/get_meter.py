@@ -37,6 +37,57 @@ TYPE_NAMES = {
     "cold": "❄️ Холодная вода"
 }
 
+METER_TITLES = {
+    1: "ГВС кухня",
+    2: "ГВС санузел №1",
+    3: "ГВС санузел №2",
+}
+
+
+def _get_meter_title(meter_number) -> str:
+    """Человеческое название счётчика по его номеру."""
+    try:
+        num = int(meter_number or 1)
+    except (TypeError, ValueError):
+        num = 1
+    return METER_TITLES.get(num, f"Счётчик #{num}")
+
+
+def _format_date_ddmmyy(value) -> str:
+    """
+    Привести дату/датавремя/строку к формату ДД.ММ.ГГ.
+    Если не получилось распарсить — вернуть исходное/пустую строку.
+    """
+    if value is None:
+        return ""
+
+    # Уже datetime / date
+    if isinstance(value, datetime):
+        return value.strftime("%d.%m.%y")
+    if isinstance(value, date):
+        return value.strftime("%d.%m.%y")
+
+    # Если строка — пробуем несколько вариантов
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return ""
+
+        # ISO-формат: 2025-11-07 или 2025-11-07T12:34:56
+        try:
+            # обрежем лишнее (временную часть), если есть
+            base = value.split("T")[0].split(" ")[0]
+            dt = datetime.strptime(base, "%Y-%m-%d")
+            return dt.strftime("%d.%m.%y")
+        except ValueError:
+            pass
+
+        # Если уже в формате ДД.ММ.ГГ/ГГГГ — просто вернём как есть
+        return value
+
+    # На всякий случай
+    return str(value)
+
 
 def month_selection_keyboard(meter_type: str, year: int = None):
     """Меню выбора месяца"""
@@ -320,26 +371,42 @@ async def generate_csv(data: list, filename: str) -> str:
     with open(filepath, 'w', newline='', encoding='utf-8-sig') as csvfile:
         writer = csv.writer(csvfile, delimiter=';')
 
-        # Заголовки
-        writer.writerow(['ID', 'Пользователь', 'Адрес', 'Телефон', 'Показания (м³)', 'Дата', 'Создано'])
+        # 🔹 Заголовки (добавили колонку счётчика)
+        writer.writerow([
+            'ID',
+            'Пользователь',
+            'Адрес',
+            'Телефон',
+            'Счётчик',
+            'Показания (м³)',
+            'Дата',
+            'Создано'
+        ])
 
-        # Данные
+        # 🔹 Данные
         for row in data:
             address = f"{row.get('street', '')}, д. {row.get('house', '')}"
             if row.get('apartment'):
                 address += f", кв. {row['apartment']}"
+
+            meter_title = _get_meter_title(row.get('meter_number'))
+
+            reading_date = _format_date_ddmmyy(row.get('reading_date'))
+            created_at = _format_date_ddmmyy(row.get('created_at'))
 
             writer.writerow([
                 row.get('id', ''),
                 row.get('name', ''),
                 address,
                 row.get('phone', ''),
+                meter_title,
                 row.get('value', ''),
-                row.get('reading_date', ''),
-                row.get('created_at', '')
+                reading_date,
+                created_at,
             ])
 
     return filepath
+
 
 
 async def generate_xlsx(data: list, filename: str) -> str:
@@ -360,8 +427,17 @@ async def generate_xlsx(data: list, filename: str) -> str:
     ws = wb.active
     ws.title = "Показания"
 
-    # Заголовки
-    headers = ['ID', 'Пользователь', 'Адрес', 'Телефон', 'Показания (м³)', 'Дата', 'Создано']
+    # 🔹 Заголовки (добавили колонку счётчика)
+    headers = [
+        'ID',
+        'Пользователь',
+        'Адрес',
+        'Телефон',
+        'Счётчик',
+        'Показания (м³)',
+        'Дата',
+        'Создано',
+    ]
     ws.append(headers)
 
     # Стиль заголовков
@@ -369,20 +445,26 @@ async def generate_xlsx(data: list, filename: str) -> str:
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal='center')
 
-    # Данные
+    # 🔹 Данные
     for row in data:
         address = f"{row.get('street', '')}, д. {row.get('house', '')}"
         if row.get('apartment'):
             address += f", кв. {row['apartment']}"
+
+        meter_title = _get_meter_title(row.get('meter_number'))
+
+        reading_date = _format_date_ddmmyy(row.get('reading_date'))
+        created_at = _format_date_ddmmyy(row.get('created_at'))
 
         ws.append([
             row.get('id', ''),
             row.get('name', ''),
             address,
             row.get('phone', ''),
+            meter_title,
             row.get('value', ''),
-            str(row.get('reading_date', '')),
-            str(row.get('created_at', ''))
+            reading_date,
+            created_at,
         ])
 
     # Автоширина столбцов
@@ -391,15 +473,16 @@ async def generate_xlsx(data: list, filename: str) -> str:
         column_letter = column[0].column_letter
         for cell in column:
             try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(cell.value)
-            except:  # noqa: E722
+                if cell.value is not None and len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except Exception:  # noqa: E722
                 pass
         adjusted_width = min(max_length + 2, 50)
         ws.column_dimensions[column_letter].width = adjusted_width
 
     wb.save(filepath)
     return filepath
+
 
 
 async def generate_json(data: list, filename: str) -> str:

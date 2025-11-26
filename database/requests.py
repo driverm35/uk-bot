@@ -425,34 +425,10 @@ async def get_all_meter_readings_by_type_and_period(
     result = await session.execute(query)
     rows = result.fetchall()
 
-    # ✅ Преобразуем в словари с обработкой типов
-    data = []
+    # ✅ Преобразуем в словари
+    data: list[dict] = []
     for row in rows:
-        row_dict = dict(row._mapping)
-        
-        # Преобразуем reading_date в строку если это не строка
-        if row_dict.get('reading_date'):
-            rd = row_dict['reading_date']
-            if isinstance(rd, str):
-                # Если строка содержит время - обрежем
-                if ' ' in rd:
-                    rd = rd.split(' ')[0]
-                row_dict['reading_date'] = rd
-            else:
-                row_dict['reading_date'] = rd.isoformat() if hasattr(rd, 'isoformat') else str(rd)
-        
-        # Преобразуем created_at
-        if row_dict.get('created_at'):
-            ca = row_dict['created_at']
-            if isinstance(ca, str):
-                # Уже строка, оставляем как есть
-                pass
-            elif hasattr(ca, 'isoformat'):
-                row_dict['created_at'] = ca.isoformat()
-            else:
-                row_dict['created_at'] = str(ca)
-        
-        data.append(row_dict)
+        data.append(dict(row._mapping))
 
     return data
 
