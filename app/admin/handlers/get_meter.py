@@ -435,8 +435,7 @@ async def generate_xlsx(data: list, filename: str) -> str:
         'Телефон',
         'Счётчик',
         'Показания (м³)',
-        'Дата',
-        'Создано',
+        'Дата'
     ]
     ws.append(headers)
 
@@ -454,7 +453,6 @@ async def generate_xlsx(data: list, filename: str) -> str:
         meter_title = _get_meter_title(row.get('meter_number'))
 
         reading_date = _format_date_ddmmyy(row.get('reading_date'))
-        created_at = _format_date_ddmmyy(row.get('created_at'))
 
         ws.append([
             row.get('id', ''),
@@ -464,7 +462,6 @@ async def generate_xlsx(data: list, filename: str) -> str:
             meter_title,
             row.get('value', ''),
             reading_date,
-            created_at,
         ])
 
     # Автоширина столбцов
