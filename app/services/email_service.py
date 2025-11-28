@@ -19,13 +19,13 @@ async def send_email(
 ) -> bool:
     """
     Универсальная отправка email
-    
+
     Args:
         to: Email получателя
         subject: Тема письма
         body: Текст письма
         attachment_path: Путь к файлу-вложению (опционально)
-    
+
     Returns:
         True если отправка успешна, False в случае ошибки
     """
@@ -68,11 +68,11 @@ async def send_email(
 def _attach_file(msg: MIMEMultipart, attachment_path: str) -> bool:
     """
     Прикрепляет файл к сообщению
-    
+
     Args:
         msg: MIME сообщение
         attachment_path: Путь к файлу
-    
+
     Returns:
         True если файл успешно прикреплен
     """
@@ -103,20 +103,22 @@ def _attach_file(msg: MIMEMultipart, attachment_path: str) -> bool:
 def _send_smtp(msg: MIMEMultipart, recipient: str) -> None:
     """
     Синхронная отправка email через SMTP
-    
+
     Args:
         msg: Подготовленное сообщение
         recipient: Email получателя
-    
+
     Raises:
         Exception: При ошибке отправки
     """
     try:
-        # Используем SSL для безопасного соединения
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.send_message(msg)
-            logger.debug(f"SMTP connection closed successfully for {recipient}")
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.sendmail(SMTP_USER, recipient, msg.as_string())
+        server.quit()
+        logger.info(f"Email успешно отправлен на {recipient}")
+        logger.debug(f"SMTP connection closed successfully for {recipient}")
 
     except smtplib.SMTPAuthenticationError as e:
         logger.error(f"SMTP authentication failed: {e}")
