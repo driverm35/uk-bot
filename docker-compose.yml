@@ -16,7 +16,11 @@ services:
         max-file: "5"
     ports:
       - "8000:8000"
-    networks: [app-network]
+    networks:
+      - app-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   backup:
     build:
@@ -36,8 +40,14 @@ services:
         max-file: "5"
     depends_on:
       - bot
-    networks: [app-network]
+    networks:
+      - app-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
 networks:
   app-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"
