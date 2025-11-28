@@ -419,44 +419,48 @@ async def ticket_attachments_done(call: CallbackQuery, state: FSMContext):
 async def ticket_confirm(call: CallbackQuery, state: FSMContext):
     logger.info(f"User {call.from_user.id} confirming ticket creation")
 
+    await call.answer("Заявка отправлена ✅", show_alert=False)
+
     data = await state.get_data()
     text_body = data.get("text", "").strip()
 
     if not text_body:
+        # Тут второй answer тоже допустим — первый уже прошёл
         await call.answer("Пустой текст", show_alert=True)
         return
 
-    # Создаём заявку
+    # 2) Создаём заявку
     ticket = await create_ticket(call.from_user.id, text_body)
 
-    # Профиль/адрес
+    # 3) Профиль/адрес
     profile = await get_user_by_tg(call.from_user.id)
     address = ""
     if profile:
         address = f"{profile['street']}, д. {profile['house']}"
-        if profile.get('apartment'):
+        if profile.get("apartment"):
             address += f", кв. {profile['apartment']}"
 
     status_emoji = TicketStatus.emoji(ticket.status)
-    
+
     # Форматируем дату для всех нужд
-    created_at_str = ticket.created_at.strftime('%d.%m.%Y %H:%M') if ticket.created_at else '—'
-    
-    # Email уведомление инженеру (асинхронно, не блокируем основной поток)
-    email_sent = await send_ticket_email_notification(
-        ticket_id=ticket.id,
-        user_name=profile['name'] if profile else '—',
-        user_phone=profile['phone'] if profile and profile.get('phone') else '—',
-        address=address or '—',
-        text=ticket.text,
-        created_at=created_at_str
+    created_at_str = (
+        ticket.created_at.strftime("%d.%m.%Y %H:%M") if ticket.created_at else "—"
     )
-    
-    if email_sent:
-        logger.info(f"Email notification sent successfully for ticket #{ticket.id}")
-    # Если не отправлено - уже залогировано в send_ticket_email_notification
-    
-    # Текст для уведомления в Telegram (форум)
+
+    # 4) Email уведомление инженеру — В ФОНЕ, чтобы не блокировать хендлер
+    # Никаких await тут, иначе снова будем висеть 30+ секунд на нерабочем SMTP.
+    asyncio.create_task(
+        send_ticket_email_notification(
+            ticket_id=ticket.id,
+            user_name=profile["name"] if profile else "—",
+            user_phone=profile["phone"] if profile and profile.get("phone") else "—",
+            address=address or "—",
+            text=ticket.text,
+            created_at=created_at_str,
+        )
+    )
+
+    # 5) Текст для уведомления в Telegram (форум)
     notify_text = (
         f"<b>Новая заявка №{ticket.id}</b>\n\n"
         f"<blockquote><b>Заявитель:</b> {profile['name'] if profile else '—'}"
@@ -468,8 +472,8 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
         f"<b>Текст:</b>\n<blockquote>{ticket.text}</blockquote>\n\n"
         f"Установить статус:\nОткрыта: /open\nВ работе: /work\nЗавершена: /done"
     )
-    
-    # Текст для админов в ЛС
+
+    # 6) Текст для админов в ЛС
     admin_notify_text = (
         f"<b>Новая заявка №{ticket.id}</b>\n\n"
         f"<blockquote><b>Заявитель:</b> {profile['name'] if profile else '—'}"
@@ -481,14 +485,14 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
         f"<b>Текст:</b>\n<blockquote>{ticket.text}</blockquote>\n\n"
     )
 
-    # Форум-топик
+    # 7) Форум-топик
     group_chat_id, thread_id = None, None
     if NOTIFICATION_CHANNEL_ID:
         try:
             topic_title = f"{status_emoji} Заявка №{ticket.id}"
             topic = await call.bot.create_forum_topic(
                 chat_id=NOTIFICATION_CHANNEL_ID,
-                name=topic_title
+                name=topic_title,
             )
             group_chat_id, thread_id = NOTIFICATION_CHANNEL_ID, topic.message_thread_id
             await set_ticket_thread(ticket.id, group_chat_id, thread_id)
@@ -497,17 +501,17 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
                 message_thread_id=thread_id,
                 text=notify_text,
                 parse_mode="HTML",
-                reply_markup=status_panel_kb(ticket.id)
+                reply_markup=status_panel_kb(ticket.id),
             )
             logger.info(f"Forum topic created for ticket #{ticket.id}")
         except Exception as e:
             logger.error(f"Failed to create forum topic for ticket #{ticket.id}: {e}")
 
-    # Вложения
+    # 8) Вложения
     attachments = data.get("attachments", [])
     if attachments:
         logger.info(f"Processing {len(attachments)} attachments for ticket #{ticket.id}")
-        
+
     for a in attachments:
         try:
             await add_ticket_attachment(
@@ -515,7 +519,7 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
                 file_id=a["file_id"],
                 file_unique_id=a.get("file_unique_id"),
                 atype=a["type"],
-                caption=a.get("caption")
+                caption=a.get("caption"),
             )
 
             # Отправляем вложение в топик, если он создан
@@ -523,9 +527,9 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
                 send_kwargs = {
                     "chat_id": group_chat_id,
                     "message_thread_id": thread_id,
-                    "caption": a.get("caption")
+                    "caption": a.get("caption"),
                 }
-                
+
                 if a["type"] == AttachmentType.PHOTO:
                     await call.bot.send_photo(photo=a["file_id"], **send_kwargs)
                 elif a["type"] == AttachmentType.VIDEO:
@@ -538,40 +542,37 @@ async def ticket_confirm(call: CallbackQuery, state: FSMContext):
                     await call.bot.send_voice(
                         voice=a["file_id"],
                         chat_id=group_chat_id,
-                        message_thread_id=thread_id
+                        message_thread_id=thread_id,
                     )
-                    
+
         except Exception as e:
             logger.error(f"Failed to process attachment for ticket #{ticket.id}: {e}")
 
-    # Уведомления админам в ЛС
+    # 9) Уведомления админам в ЛС
     admin_ids = get_admin_ids()
     if admin_ids:
         logger.info(f"Sending notifications to {len(admin_ids)} admins")
-        
+
     for admin_id in admin_ids:
         try:
             await call.bot.send_message(
                 admin_id,
                 admin_notify_text,
                 parse_mode="HTML",
-                reply_markup=admin_open_button(call.from_user.id)
+                reply_markup=admin_open_button(call.from_user.id),
             )
         except Exception as e:
             logger.error(f"Failed to notify admin {admin_id}: {e}")
 
-    # Очистка и ответ пользователю
+    # 10) Очистка и ответ пользователю в чате
     await clear_chat_history(call.bot, call.message.chat.id, state)
     await state.clear()
 
     await call.message.answer(
         f"✅ Заявка №{ticket.id} создана.",
         reply_markup=kb.ticket_menu_with_active(ticket.id),
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-    await call.answer("Отправлено ✅")
-
-
 
 
 @ticket_router.callback_query(cb.filter(F.a == "ticket_open_active"))
