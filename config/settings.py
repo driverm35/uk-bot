@@ -76,7 +76,7 @@ METER_COLD_WATER_TOPIC_ID = config('METER_COLD_WATER_TOPIC_ID')
 
 # SMTP settings for email
 SMTP_HOST = config("SMTP_HOST", default="smtp.mail.ru")
-SMTP_PORT = config("SMTP_PORT", cast=int, default=465)
+SMTP_PORT = config("SMTP_PORT", cast=int, default=587)
 SMTP_USER = config("SMTP_USER", default="")
 SMTP_PASSWORD = config("SMTP_PASSWORD", default="")
 SMTP_USE_TLS = config("SMTP_USE_TLS", cast=bool, default=False)
